@@ -30,39 +30,69 @@
 
 /**
  * @file
- *   This file implements buffer management for frames received by nRF 802.15.4 radio driver.
+ *   This file implements timer scheduler for the nrf 802.15.4 driver.
+ *
+ * Note that current implementation supports just single one-shot timer. Scheduling is not
+ * implemented yet.
  *
  */
 
-#include "nrf_drv_radio802154_rx_buffer.h"
+#include "nrf_drv_radio802154_timer_sched.h"
 
+#include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
-#include "nrf_drv_radio802154_config.h"
+#include "platform/timer/nrf_drv_radio802154_timer.h"
 
-#if NRF_DRV_RADIO802154_RX_BUFFERS < 1
-#error Not enough rx buffers in the 802.15.4 radio driver.
-#endif
+static nrf_drv_radio802154_timer_t * mp_timer;  ///< Pointer to currently running timer.
 
-rx_buffer_t nrf_drv_radio802154_rx_buffers[NRF_DRV_RADIO802154_RX_BUFFERS]; ///< Receive buffers.
-
-void nrf_drv_radio802154_rx_buffer_init(void)
+uint32_t nrf_drv_radio802154_timer_sched_time_get(void)
 {
-    for (uint32_t i = 0; i < NRF_DRV_RADIO802154_RX_BUFFERS; i++)
-    {
-        nrf_drv_radio802154_rx_buffers[i].free = true;
-    }
+    return nrf_drv_radio802154_timer_time_get();
 }
 
-rx_buffer_t * nrf_drv_radio802154_rx_buffer_free_find(void)
+bool nrf_drv_radio802154_timer_sched_time_is_in_future(uint32_t now, uint32_t t0, uint32_t dt)
 {
-    for (uint32_t i = 0; i < NRF_DRV_RADIO802154_RX_BUFFERS; i++)
+    uint32_t target_time = t0 + dt;
+    int32_t  difference  = target_time - now;
+
+    return difference > 0;
+}
+
+void nrf_drv_radio802154_timer_sched_add(nrf_drv_radio802154_timer_t * p_timer, bool round_up)
+{
+    assert(!nrf_drv_radio802154_timer_is_running()); // Currently only one timer can be running at a time
+    assert(p_timer != NULL);
+    assert(p_timer->callback != NULL);
+
+    uint32_t dt = p_timer->dt;
+
+    if (round_up)
     {
-        if (nrf_drv_radio802154_rx_buffers[i].free)
-        {
-            return &nrf_drv_radio802154_rx_buffers[i];
-        }
+        dt += nrf_drv_radio802154_timer_granularity_get() - 1;
     }
 
-    return NULL;
+    mp_timer = p_timer;
+
+    nrf_drv_radio802154_timer_start(p_timer->t0, dt);
 }
+
+void nrf_drv_radio802154_timer_sched_remove(nrf_drv_radio802154_timer_t * p_timer)
+{
+    assert(p_timer != NULL);
+
+    nrf_drv_radio802154_timer_stop();
+
+    mp_timer = NULL;
+}
+
+void nrf_drv_radio802154_timer_fired(void)
+{
+    assert(mp_timer != NULL);
+    assert(mp_timer->callback != NULL);
+
+    mp_timer->callback(mp_timer->p_context);
+}
+

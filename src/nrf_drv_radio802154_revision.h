@@ -29,40 +29,39 @@
  */
 
 /**
- * @file
- *   This file implements buffer management for frames received by nRF 802.15.4 radio driver.
+ * @brief This module contains helpers for checking nRF SoC revision.
  *
  */
 
-#include "nrf_drv_radio802154_rx_buffer.h"
+#ifndef NRF_DRV_RADIO802154_REVISION_H_
+#define NRF_DRV_RADIO802154_REVISION_H_
 
-#include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-#include "nrf_drv_radio802154_config.h"
-
-#if NRF_DRV_RADIO802154_RX_BUFFERS < 1
-#error Not enough rx buffers in the 802.15.4 radio driver.
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-rx_buffer_t nrf_drv_radio802154_rx_buffers[NRF_DRV_RADIO802154_RX_BUFFERS]; ///< Receive buffers.
+/**
+ * @brief This function initializes the module by reading the nRF52840 revision
+ *        from the registers and storing it for convenient access.
+ *
+ * @note If the chip revision is not recognized, this module assumes that it is running on a newer
+ *       chip revision that has all of the features, that the most recent known revision has.
+ */
+void nrf_drv_radio802154_revision_init(void);
 
-void nrf_drv_radio802154_rx_buffer_init(void)
-{
-    for (uint32_t i = 0; i < NRF_DRV_RADIO802154_RX_BUFFERS; i++)
-    {
-        nrf_drv_radio802154_rx_buffers[i].free = true;
-    }
+/**
+ * @brief Function to check if the program is running on NRF52840 revision that supports PHYEND event.
+ *
+ * @retval true  If PHYEND event is supported.
+ * @retval false If PHYEND event is not supported.
+ */
+bool nrf_drv_radio802154_revision_has_phyend_event(void);
+
+#ifdef __cplusplus
 }
+#endif
 
-rx_buffer_t * nrf_drv_radio802154_rx_buffer_free_find(void)
-{
-    for (uint32_t i = 0; i < NRF_DRV_RADIO802154_RX_BUFFERS; i++)
-    {
-        if (nrf_drv_radio802154_rx_buffers[i].free)
-        {
-            return &nrf_drv_radio802154_rx_buffers[i];
-        }
-    }
-
-    return NULL;
-}
+#endif /* NRF_DRV_RADIO802154_REVISION_H_ */

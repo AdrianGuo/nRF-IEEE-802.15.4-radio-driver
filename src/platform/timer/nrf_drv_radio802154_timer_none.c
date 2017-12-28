@@ -30,39 +30,33 @@
 
 /**
  * @file
- *   This file implements buffer management for frames received by nRF 802.15.4 radio driver.
+ *   This file implements the nrf 802.15.4 timer abstraction in case timer is not used.
+ *
+ * This timer abstraction should be used only when none of driver features that use timer is enabled.
  *
  */
 
-#include "nrf_drv_radio802154_rx_buffer.h"
+#include "nrf_drv_radio802154_timer.h"
 
-#include <stddef.h>
-
-#include "nrf_drv_radio802154_config.h"
-
-#if NRF_DRV_RADIO802154_RX_BUFFERS < 1
-#error Not enough rx buffers in the 802.15.4 radio driver.
-#endif
-
-rx_buffer_t nrf_drv_radio802154_rx_buffers[NRF_DRV_RADIO802154_RX_BUFFERS]; ///< Receive buffers.
-
-void nrf_drv_radio802154_rx_buffer_init(void)
+void nrf_drv_radio802154_timer_init(void)
 {
-    for (uint32_t i = 0; i < NRF_DRV_RADIO802154_RX_BUFFERS; i++)
-    {
-        nrf_drv_radio802154_rx_buffers[i].free = true;
-    }
+    // Intentionally empty
 }
 
-rx_buffer_t * nrf_drv_radio802154_rx_buffer_free_find(void)
+void nrf_drv_radio802154_timer_deinit(void)
 {
-    for (uint32_t i = 0; i < NRF_DRV_RADIO802154_RX_BUFFERS; i++)
-    {
-        if (nrf_drv_radio802154_rx_buffers[i].free)
-        {
-            return &nrf_drv_radio802154_rx_buffers[i];
-        }
-    }
-
-    return NULL;
+    // Intentionally empty
 }
+
+void nrf_drv_radio802154_timer_critical_section_enter(void)
+{
+    // Intentionally empty
+}
+
+void nrf_drv_radio802154_timer_critical_section_exit(void)
+{
+    // Intentionally empty
+}
+
+// Other functions from TimAL API are intentionally not implemented to detect build configuration
+// problems compile-time.

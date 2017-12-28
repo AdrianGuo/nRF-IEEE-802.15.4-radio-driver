@@ -30,39 +30,85 @@
 
 /**
  * @file
- *   This file implements buffer management for frames received by nRF 802.15.4 radio driver.
+ *   This file implements the nrf 802.15.4 HF Clock abstraction with SDK driver.
  *
+ * This implementation uses clock driver implementation from SDK.
  */
 
-#include "nrf_drv_radio802154_rx_buffer.h"
+#include "nrf_drv_radio802154_clock.h"
 
 #include <stddef.h>
 
-#include "nrf_drv_radio802154_config.h"
+#include <compiler_abstraction.h>
+#include <nrf_drv_clock.h>
 
-#if NRF_DRV_RADIO802154_RX_BUFFERS < 1
-#error Not enough rx buffers in the 802.15.4 radio driver.
-#endif
+static void clock_handler(nrf_drv_clock_evt_type_t event);
 
-rx_buffer_t nrf_drv_radio802154_rx_buffers[NRF_DRV_RADIO802154_RX_BUFFERS]; ///< Receive buffers.
-
-void nrf_drv_radio802154_rx_buffer_init(void)
+static nrf_drv_clock_handler_item_t m_clock_handler =
 {
-    for (uint32_t i = 0; i < NRF_DRV_RADIO802154_RX_BUFFERS; i++)
+    .p_next        = NULL,
+    .event_handler = clock_handler,
+};
+
+static void clock_handler(nrf_drv_clock_evt_type_t event)
+{
+    if (event == NRF_DRV_CLOCK_EVT_HFCLK_STARTED)
     {
-        nrf_drv_radio802154_rx_buffers[i].free = true;
+        nrf_drv_radio802154_clock_hfclk_ready();
+    }
+
+    if (event == NRF_DRV_CLOCK_EVT_LFCLK_STARTED)
+    {
+        nrf_drv_radio802154_clock_lfclk_ready();
     }
 }
 
-rx_buffer_t * nrf_drv_radio802154_rx_buffer_free_find(void)
+void nrf_drv_radio802154_clock_init(void)
 {
-    for (uint32_t i = 0; i < NRF_DRV_RADIO802154_RX_BUFFERS; i++)
-    {
-        if (nrf_drv_radio802154_rx_buffers[i].free)
-        {
-            return &nrf_drv_radio802154_rx_buffers[i];
-        }
-    }
+    nrf_drv_clock_init();
+}
 
-    return NULL;
+void nrf_drv_radio802154_clock_deinit(void)
+{
+    nrf_drv_clock_uninit();
+}
+
+void nrf_drv_radio802154_clock_hfclk_start(void)
+{
+    nrf_drv_clock_hfclk_request(&m_clock_handler);
+}
+
+void nrf_drv_radio802154_clock_hfclk_stop(void)
+{
+    nrf_drv_clock_hfclk_release();
+}
+
+bool nrf_drv_radio802154_clock_hfclk_is_running(void)
+{
+    return nrf_drv_clock_hfclk_is_running();
+}
+
+void nrf_drv_radio802154_clock_lfclk_start(void)
+{
+    nrf_drv_clock_lfclk_request(&m_clock_handler);
+}
+
+void nrf_drv_radio802154_clock_lfclk_stop(void)
+{
+    nrf_drv_clock_lfclk_release();
+}
+
+bool nrf_drv_radio802154_clock_lfclk_is_running(void)
+{
+    return nrf_drv_clock_lfclk_is_running();
+}
+
+__WEAK void nrf_drv_radio802154_clock_hfclk_ready(void)
+{
+    // Intentionally empty.
+}
+
+__WEAK void nrf_drv_radio802154_clock_lfclk_ready(void)
+{
+    // Intentionally empty.
 }
